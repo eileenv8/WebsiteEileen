@@ -1,47 +1,84 @@
 let scrollPercent = 0;
 let rotation = 0;
-let brush;
-let watercolorBrush;
-let detailBrush;
 let bookLink = 'https://eileenmargaret.substack.com/';
-let bookWidth = 100;  // Adjust this to match your book size
-let bookHeight = 100; // Adjust this to match your book size
-let bookX = 180;      // Center X position from drawBooks
-let bookY = 150;      // Center Y position from drawBooks
+let bookWidth = 100;
+let bookHeight = 100;
+let bookX = 180;
+let bookY = 150;
 
-function mousePressed() {
-    // Check if click is within book bounds
-    if (mouseX > bookX - bookWidth/2 && mouseX < bookX + bookWidth/2 &&
-        mouseY > bookY - bookHeight/2 && mouseY < bookY + bookHeight/2) {
-        window.open(bookLink, '_blank');
+// Interactive elements tracking
+let interactiveElements = {
+    books: {
+        isHovered: false,
+        baseX: bookX,
+        baseY: bookY,
+        width: bookWidth,
+        height: bookHeight,
+        checkHover: function(px, py) {
+            // Convert mouse coordinates to local space
+            px = (px - width/2) / 1.5 + 100;
+            py = (py - height/2) / 1.5 + 100;
+            return px > this.baseX - this.width/2 && 
+                   px < this.baseX + this.width/2 &&
+                   py > this.baseY - this.height/2 && 
+                   py < this.baseY + this.height/2;
+        }
+    },
+    dress: {
+        isHovered: false,
+        checkHover: function(px, py) {
+            px = (px - width/2) / 1.5 + 100;
+            py = (py - height/2) / 1.5 + 100;
+            return px > 66 && px < 175 && 
+                   py > 64 && py < 194;
+        }
+    },
+    laptop: {
+        isHovered: false,
+        checkHover: function(px, py) {
+            px = (px - width/2) / 1.5 + 100;
+            py = (py - height/2) / 1.5 + 100;
+            let adjustedX = (px - 100) / 0.8;
+            let adjustedY = (py - 60) / 0.8;
+            return adjustedX > 1 && adjustedX < 45 && 
+                   adjustedY > 1 && adjustedY < 32;
+        }
     }
-}
-
+};
 
 function setup() {
     let canvas = createCanvas(400, 400);
     canvas.parent('p5-canvas');
-
-    
 }
 
 function draw() {
     background(245, 240, 230);
     
-    // Update scroll position and establish rotation of wheel
+    // Update scroll position and rotation
     scrollPercent = (window.pageYOffset) / (document.documentElement.scrollHeight - window.innerHeight);
-    rotation += 0.005; //constant gentle wheel rotation
+    rotation += 0.005;
+
+    // Check hover states
+    for (let elemName in interactiveElements) {
+        interactiveElements[elemName].isHovered = interactiveElements[elemName].checkHover(mouseX, mouseY);
+    }
+
+    // Update cursor based on hover state
+    if (Object.values(interactiveElements).some(elem => elem.isHovered)) {
+        cursor(HAND);
+    } else {
+        cursor(ARROW);
+    }
 
     // Center and scale everything
     push();
     translate(width/2, height/2);
-    scale(1.5); // Scale up the figure a bit
-    translate(-100, -100); // Center based on the figure's coordinates
+    scale(1.5);
+    translate(-100, -100);
 
-     // Draw elements in order (back to front)
-     drawBigWheel();   // Background
+    // Draw elements in order
+    drawBigWheel();
 
-    // Add gentle sway based on scroll
     let sway = sin(scrollPercent * TWO_PI) * 5;
     rotate(radians(sway));
     
@@ -49,13 +86,21 @@ function draw() {
     drawLaptop();
     drawBooks();
 
-    if (mouseX > 200 && mouseX < 300 && mouseY > 150 && mouseY < 250) {
-        cursor(HAND);
-    } else {
-        cursor(ARROW);
-    }
-
     pop();
+
+    // Draw hover information if needed
+    let hoveredElem = Object.entries(interactiveElements).find(([_, elem]) => elem.isHovered);
+    if (hoveredElem) {
+        push();
+        fill(0);
+        noStroke();
+        textAlign(CENTER);
+        textSize(16);
+        if (hoveredElem[0] === 'books') {
+            text('read my writing on Substack', width/2, height - 30);
+        }
+        pop();
+    }
 }
 
 function drawFigure() {
@@ -63,7 +108,11 @@ function drawFigure() {
     stroke(0);
     strokeWeight(2);
 
-    // Path 1 - Looks like a detail piece
+    if (interactiveElements.dress.isHovered) {
+        fill(255, 182, 193, 100); // Light pink with transparency
+    }
+
+    // Path 1 - Detail piece
     beginShape();
     vertex(77, 87.5);
     vertex(70.6024, 96.5);
@@ -143,44 +192,17 @@ function drawFigure() {
     endShape();
 }
 
-function drawBigWheel() {
-    push();
-    translate(0, 15); // Position the wheel behind the figure
-    rotate(rotation);
-    
-    // Wheel rim
-    stroke(70);
-    strokeWeight(3);
-    noFill();
-    circle(0, 0, 200);
-    
-    // Spokes
-    for (let i = 0; i < 12; i++) {
-        let angle = TWO_PI * i / 12;
-        line(0, 0, cos(angle) * 100, sin(angle) * 100);
-    }
-    
-    // Inner circles
-    circle(0, 0, 160);
-    circle(0, 0, 40);
-    
-    // Decorative elements
-    for (let i = 0; i < 12; i++) {
-        let angle = TWO_PI * i / 12;
-        let x = cos(angle) * 80;
-        let y = sin(angle) * 80;
-        circle(x, y, 10);
-    }
-    pop();
-}
-
 function drawLaptop() {
     push();
-    translate(100, 60); // Position on lap
-    scale(0.8); // Adjust size as needed
+    translate(100, 60);
+    scale(0.8);
     
-    // Draw laptop using the SVG paths
-    fill(0);
+    if (interactiveElements.laptop.isHovered) {
+        fill(105, 105, 105); // Darker gray when hovered
+    } else {
+        fill(0);
+    }
+    
     noStroke();
     
     // Main body pieces
@@ -234,31 +256,25 @@ function drawBooks() {
     push();
     translate(bookX, bookY);
     
-    let bookSway = sin(frameCount * 0.02) * 0.5;
+    let bookSway = sin(frameCount * 0.02) * (interactiveElements.books.isHovered ? 1 : 0.5);
     
     // First book (bottom)
     push();
     rotate(radians(2 + bookSway));
-    fill('#8B4513');
+    fill(interactiveElements.books.isHovered ? '#A0522D' : '#8B4513');
     stroke(0);
     strokeWeight(1);
     rect(-20, -15, 40, 16);
-    // Aligned spine
-    fill('#6B3410');
+    fill(interactiveElements.books.isHovered ? '#804020' : '#6B3410');
     quad(
-        20, -15,      // Changed from -17 to -15
-        24, -14,      // Changed from -19 to -15
-        24, -0,        // Changed from -4 to 0
-        20, 1         // Changed from -2 to 0
+        20, -15,
+        24, -14,
+        24, -0,
+        20, 1
     );
-    // Pages remain the same
     noStroke();
     for(let i = 0; i < 7; i++) {
-        if (i % 2 === 0) {
-            fill(255);
-        } else {
-            fill(0);
-        }
+        fill(i % 2 === 0 ? 255 : 220);
         rect(-19, -12 + (i * 1.5), 38, 1);
     }
     pop();
@@ -266,25 +282,20 @@ function drawBooks() {
     // Second book (middle)
     push();
     rotate(radians(1 + bookSway));
-    fill('#A0522D');
+    fill(interactiveElements.books.isHovered ? '#B8860B' : '#A0522D');
     stroke(0);
     strokeWeight(1);
     rect(-17, -26, 35, 12);
-    fill('#804020');
+    fill(interactiveElements.books.isHovered ? '#956B08' : '#804020');
     quad(
-        18, -26,      // Changed to match book top
-        22, -26,      // Changed to match book top
-        22, -15,      // Changed to match book bottom
-        18, -14       // Changed to match book bottom
+        18, -26,
+        22, -26,
+        22, -15,
+        18, -14
     );
-    // Pages remain the same
     noStroke();
     for(let i = 0; i < 5; i++) {
-        if (i % 2 === 0) {
-            fill(255);
-        } else {
-            fill(0);
-        }
+        fill(i % 2 === 0 ? 255 : 220);
         rect(-17, -23 + (i * 1.2), 34, 1);
     }
     pop();
@@ -292,32 +303,62 @@ function drawBooks() {
     // Third book (top)
     push();
     rotate(radians(4 + bookSway));
-    fill('#6B4423');
+    fill(interactiveElements.books.isHovered ? '#8B4513' : '#6B4423');
     stroke(0);
     strokeWeight(1);
     rect(-19, -41, 38, 14);
-    fill('#4B3016');
+    fill(interactiveElements.books.isHovered ? '#6B3410' : '#4B3016');
     quad(
-        19, -41,      // Changed to match book top
-        23, -40,      // Changed to match book top
-        23, -28,      // Changed to match book bottom
-        19, -27       // Changed to match book bottom
+        19, -41,
+        23, -40,
+        23, -28,
+        19, -27
     );
-    // Pages remain the same
     noStroke();
     for(let i = 0; i < 7; i++) {
-        if (i % 2 === 0) {
-            fill(255);
-        } else {
-            fill(0);
-        }
+        fill(i % 2 === 0 ? 255 : 220);
         rect(-18, -38 + (i * 1.2), 36, 1);
     }
-    pop()
+    pop();
     
+    pop();
+}
+
+function drawBigWheel() {
+    push();
+    translate(0, 15);
+    rotate(rotation);
+    
+    stroke(70);
+    strokeWeight(3);
+    noFill();
+    circle(0, 0, 200);
+    
+    for (let i = 0; i < 12; i++) {
+        let angle = TWO_PI * i / 12;
+        line(0, 0, cos(angle) * 100, sin(angle) * 100);
+    }
+    
+    circle(0, 0, 160);
+    circle(0, 0, 40);
+    
+    for (let i = 0; i < 12; i++) {
+        let angle = TWO_PI * i / 12;
+        let x = cos(angle) * 80;
+        let y = sin(angle) * 80;
+        circle(x, y, 10);
+    }
     pop();
 }
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
 }
+
+function mousePressed() {
+    // Check if books are clicked
+    if (interactiveElements.books.isHovered) {
+        window.open(bookLink, '_blank');
+    }
+}
+
